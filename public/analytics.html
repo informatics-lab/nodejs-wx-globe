@@ -1,0 +1,382 @@
+<html>
+<head>
+  <!--
+  <script type="text/javascript" src="bower_components/jquery/dist/jquery.min.js"></script>
+  <script type="text/javascript" src="bower_components/threejs/build/three.min.js"></script>
+  <script type="text/javascript" src="bower_components/threejs/examples/js/controls/TrackballControls.js"></script>
+-->
+<link href='http://fonts.googleapis.com/css?family=IM+Fell+English+SC|Atomic+Age|IM+Fell+English|Orbitron|Unna' rel='stylesheet' type='text/css'>
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/meny/1.4.0/meny.min.js"></script>
+
+<script type="text/javascript" src="http://threejs.org/build/three.min.js"></script>
+<script type="text/javascript" src="http://threejs.org/examples/js/controls/TrackballControls.js"></script>
+
+<script src="MapMarker.js"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/websocket_init.js"></script>
+
+<style>
+body {
+  margin: 0px;
+  background-color: #aaaaaa;
+  overflow: hidden;
+}
+
+#list {
+  font-family: 'Orbitron', sans-serif;
+  width: 90%;
+  height: 90%;
+  line-height: 2em;
+  border: 1px solid #ccc;
+  padding: 2%;
+  margin: 0;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+}
+
+li {
+  border-top: 1px solid #ccc;
+}
+
+/* just some content with arbitrary styles for explanation purposes */
+.info {
+    width: 80%;
+    height: 100px;
+    position: fixed;
+    bottom: 0px;
+    left: 10%;
+    padding: 10px;
+    background-color: rgba(120,120,120,0.5);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    border-radius: 5px;
+    z-index: 11; /* 1px higher than the overlay layer */
+}
+
+</style>
+
+<script>
+var scene = new THREE.Scene();
+var width  = window.innerWidth,
+height = window.innerHeight;
+var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 0);
+camera.position.y = 0;
+camera.position.z = 500;
+var controls = new THREE.TrackballControls(camera);
+var spheres = new THREE.Object3D();
+var labels;
+scene.add( spheres );
+var globe_vid = {};
+
+var ambientLight = new THREE.AmbientLight( 0x333366 );
+scene.add( ambientLight );
+
+var pointLight = new THREE.PointLight( 0xffff55, 1, 0 );
+pointLight.position.set( 0, 0, 2348100 );
+scene.add( pointLight );
+
+var sunGeometry = new THREE.SphereGeometry( 10000 );
+var sunMaterial = new THREE.MeshBasicMaterial( {color: 0xffff55} );
+var sun = new THREE.Mesh( sunGeometry, sunMaterial );
+sun.position.set( 0, 0, 2348100 );
+scene.add( sun );
+
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(width, height);
+
+function render() {
+  controls.update();
+  requestAnimationFrame(render);
+  //spheres.rotation.y = Date.now() * 0.0001;
+  /*
+  if(labels){
+    labels.forEach(function(l){
+      m = l.marker;
+      if(m){
+      if(camera.position.distanceTo(m.position) > camera.position.distanceTo(spheres.position)) {
+        m.visible=false;
+      }else{
+        m.visible=true;
+      }
+    }
+    });
+  }
+  */
+  renderer.render(scene, camera);
+}
+
+var landTxtrParams = {
+  request:'getmap',
+  service:'wms',
+  //BBOX:'-10.12,48.77,2.43,59.29',
+  BBOX:'-180,-90,180,90',
+  srs:'EPSG:4326',
+  format:'image/jpeg',
+  layers:'gebco_latest',
+  width:2048,
+  height:1024,
+  version:'1.1.1'
+};
+
+var landTxtrUrl = 'http://www.gebco.net/' +
+'data_and_products/gebco_web_services/web_map_service/mapserv?';
+
+var basicMaterial;
+
+var earth_radius = 98;
+var atmos_radius = 100;
+
+var latNorth = 90.0;
+var latSouth = -90.0;
+var lonEast = 180.0;
+var lonWest = -180.0;
+
+var thetaStart = (Math.PI/180.0) * (90.0 - latNorth);
+var thetaEnd = (Math.PI/180.0) * (90.0 - latSouth);
+var thetaLength = thetaEnd - thetaStart;
+var phiStart = (Math.PI/180.0) * (180.0 - lonEast);
+var phiEnd = (Math.PI/180.0) * (180.0 - lonWest);
+var phiLength = phiEnd - phiStart;
+
+var geometry = new THREE.SphereGeometry( atmos_radius, 160, 120, phiStart, phiLength,
+  thetaStart, thetaLength );
+
+  var surface_geometry = new THREE.SphereGeometry( earth_radius, 160, 120, phiStart, phiLength, thetaStart, thetaLength );
+
+
+  function loadWmsImage( url, params, cb, opts ){
+    var tmpImage = new Image();
+    var wmsPng = url + jQuery.param( params );
+    tmpImage.onload = function(){
+      var canv = document.createElement('canvas');
+      var ctx = canv.getContext('2d');
+      canv.width = this.width;
+      canv.height = this.height;
+      ctx.drawImage(this, 0, 0);
+      cb(canv.toDataURL(), opts);
+    }
+    tmpImage.crossOrigin = 'anonymous';
+    tmpImage.src =  wmsPng;
+  }
+
+  function loadImage( url, cb ){
+    var tmpImage = new Image();
+    tmpImage.onload = function(){
+      var canv = document.createElement('canvas');
+      var ctx = canv.getContext('2d');
+      canv.width = this.width - 2;
+      canv.height = this.height - 4;
+      ctx.drawImage(this, -2, -2);
+      cb(canv.toDataURL());
+    }
+    tmpImage.crossOrigin = 'anonymous';
+    tmpImage.src =  url;
+  }
+
+  function loadVideo( url, cb ){
+    var video_canv = document.createElement('canvas');
+    var video = document.createElement( 'video' );
+    video.loop = true;
+    video.id = 'video';
+    video.src = url;
+    video.crossOrigin = "Anonymous";
+    video.autoplay = true;
+    video.load(); // must call after setting/changing source
+    video.playbackRate = 0.5;
+    video.addEventListener("loadedmetadata", function () {
+      cb( video )
+    })
+    video.addEventListener('loadeddata', function() {
+      video.play()
+    })
+
+  }
+
+  var wmsUrl = 'http://wms-wetoffice.rhcloud.com/neo?';
+
+  var wmsParams = {
+    layers: 'BlueMarbleNG-TB',
+    version:'1.3.0', service:'WMS', request:'GetMap',
+    styles: 'rgb',
+    crs: 'CRS:84',
+    bbox: '-180,-90,180,90',
+    width: '2048',
+    height: '1024',
+    format: 'image/png'
+  };
+
+  var sphere;
+
+  loadWmsImage( wmsUrl, wmsParams, wmsLoader, {sphere:sphere, geometry:surface_geometry});
+
+  function wmsLoader(img, opts){
+    var loader = new THREE.TextureLoader();
+    loader.crossOrigin = 'anonymous';
+    loader.load(img,
+      // Function when resource is loaded
+      function ( texture ) {
+        // do something with the texture
+        var basicMaterial = new THREE.MeshPhongMaterial( {
+          overdraw: 1.0,
+          transparent: true,
+          map: texture
+        } );
+        opts.sphere = new THREE.Mesh(	opts.geometry, basicMaterial );
+        spheres.add( opts.sphere );
+        //sphere = opts.sphere;
+      },
+      // Function called when download progresses
+      function ( xhr ) {
+        console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+      },
+      // Function called when download errors
+      function ( xhr ) {
+        console.log( 'An error happened' );
+      }
+    );
+  }
+
+  //loadLocationMarkers();
+  $.getJSON("tv_weather.json", function(data){
+    labels = [];
+    data.forEach(function(el){
+      if(el.location){
+        //console.warn(el.screen_name, el.location);
+        labels.push({text:el.screen_name,longitude:el.location[0],latitude:el.location[1]});
+      }
+    });
+    labels.forEach(function(l){
+      //l.marker =
+      TextSprite( l.text, LLtoXYZ(earth_radius,l), function(spr){l.marker=spr;spheres.add(spr);});
+      //spheres.add(l.marker);
+    });
+  });
+
+
+  function buildMenu(){
+    var meny = Meny.create({
+      // The element that will be animated in from off screen
+      menuElement: document.querySelector( '.menu' ),
+
+      // The contents that gets pushed aside while Meny is active
+      contentsElement: document.querySelector( '.page' ),
+
+      // The alignment of the menu (top/right/bottom/left)
+      position: 'left',
+
+      // The height of the menu (when using top/bottom position)
+      height: '100%',
+
+      // The width of the menu (when using left/right position)
+      width: 400,
+
+      // The angle at which the contents will rotate to.
+      angle: 30,
+
+      // The mouse distance from menu position which can trigger menu to open.
+      threshold: 40,
+
+      // Width(in px) of the thin line you see on screen when menu is in closed position.
+      overlap: 6,
+
+      // The total time taken by menu animation.
+      transitionDuration: '0.5s',
+
+      // Transition style for menu animations
+      transitionEasing: 'ease',
+
+      // Gradient overlay for the contents
+      gradient: 'rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.65) 100%)',
+
+      // Use mouse movement to automatically open/close
+      mouse: true,
+
+      // Use touch swipe events to open/close
+      touch: true
+    });
+    meny.addEventListener( 'opened', function() {
+      controls.enabled = false;
+    });
+    meny.addEventListener( 'closed', function() {
+      controls.enabled = true;
+    });
+  }
+
+  var outer_sphere;
+
+  function load( name ){
+    console.log("loading", name);
+    //spheres.remove(outer_sphere);
+    wmsParams.layers = name;
+    loadWmsImage( wmsUrl, wmsParams, wmsLoader, {sphere: outer_sphere, geometry: geometry});
+  }
+
+  spheres.rotation.y -= Math.PI/2;
+
+  controls.addEventListener( 'change', function(){
+    $('#clue').css('visibility','visible');
+    setTimeout(function(){$('#clue').css('visibility','hidden');}, 2000);
+  });
+
+  </script>
+</head>
+<body>
+  <div class="menu">
+    <div>
+      <!-- Search <input type="text"> -->
+      <br>
+      <ul  id="list"></ul>
+    </div>
+  </div>
+  <div id="clue" style="position:absolute;visibility:hidden">
+    <h1>M</h1>
+    <h1>E</h1>
+    <h1>N</h1>
+    <h1>U</h1>
+  </div>
+  <div class="page">
+    <div class="info" id="infomsg">
+    </div>
+    <div id="webgl"></div>
+    <script>
+    buildMenu();
+    $('#infomsg').html("");
+    $.getJSON("menu_gfs.json", function(data){
+      wmsUrl = data["server"] + '?';
+      delete wmsParams.styles;
+      wmsParams.transparent = true;
+      data["layers"].forEach(function(el){
+        console.log("MENU", el);
+        $('#list').append('<li onclick="load(\'' + el[0] + '\')">' + el[1] + '</li>');
+      });
+    });
+    document.getElementById('webgl').appendChild(renderer.domElement);
+    websocket.on('news', function (data) {
+      console.log(data);
+      websocket.emit('my other event', { my: 'data' });
+    });
+    websocket.on('volatile msg', function (data) {
+      console.log(data);
+      if(data.tweet){
+        var d = new Date(Number(data.tweet.timestamp_ms));
+        $('#infomsg').html( d.toString() + " " + data.tweet.text);
+      }
+      if(data.stats){
+        var d = new Date();
+        $('#infomsg').html( d.toString() + " " + data.stats);
+      }
+    });
+    render();
+    </script>
+  </div>
+</body>
+</html>

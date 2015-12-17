@@ -1,0 +1,21 @@
+{
+  "name": "wx-globe",
+  "version": "0.0.0",
+  "description": "An Elastic Beanstalk application",
+  "author": {
+    "name": "M Saunby",
+    "email": "mike@saunby.net",
+    "url": "http://saunby.net/"
+  },
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "~3.4.4",
+    "socket.io": "~1.3.7",
+    "twit": "~2.1.1",
+    "request": "~2.67.0",
+    "mongodb": "~2.1.0"
+  },
+  "private": true
+}

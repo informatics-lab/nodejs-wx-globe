@@ -1,0 +1,73 @@
+{
+	"server": "https://wms-wetoffice.rhcloud.com/iblgfs",
+	"layers": [
+		[
+			"temperature",
+			"Temperature"
+		],
+		[
+			"relative-humidity",
+			"Relative Humidity"
+		],
+		[
+			"geopotential-height",
+			"Geopotential Height"
+		],
+		[
+			"wet-bulb-potential-temperature",
+			"Wet Bulb Potential Temperature"
+		],
+		[
+			"thickness",
+			"Thickness between 1000hPa and Specified Level"
+		],
+		[
+			"precipitation-6h",
+			"Precipitation 6 Hours Accumulation"
+		],
+		[
+			"msl-pressure",
+			"MSL Pressure"
+		],
+		[
+			"wind",
+			"Wind"
+		],
+		[
+			"wind-streamlines",
+			"Streamlines"
+		],
+		[
+			"upper-air-ascent",
+			"Model Derived Upper Air Profile Ascent"
+		],
+		[
+			"route-temperature",
+			"Temperature Route Cross-Section"
+		],
+		[
+			"route-temperature-profile",
+			"Temperature Profile Route Cross-Section"
+		],
+		[
+			"meteogram-wind-and-temperature",
+			"Wind&Temperature Time Series for 12 Hours"
+		],
+		[
+			"meteogram-temperature-1d",
+			"Temperature Time Series for 1 Day"
+		],
+		[
+			"meteogram-temperature-7d",
+			"Temperature Time Series for 7 Days"
+		],
+		[
+			"meteogram-msl-pressure-1d",
+			"MSL Pressure Time Series for 1 Day"
+		],
+		[
+			"meteogram-msl-pressure-7d",
+			"MSL Pressure Time Series for 7 Days"
+		]
+	]
+}
