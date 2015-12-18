@@ -52,4 +52,19 @@ mongoClient.insert = function(collection_name, item){
   }
 }
 
+mongoClient.collections = function(callback){
+  if(mongoClient.db){
+    mongoClient.db.collections(function(err, items) {
+      var collections = [];
+       items.forEach(function(i){
+         i.count(function(err,count){console.log(count)});
+         collections.push(i.s.name);
+       });
+       callback(collections);
+    });
+  }else{
+    callback([]);
+  }
+}
+
 module.exports = {mongoClient:mongoClient, statsPublisher:statsPublisher};
