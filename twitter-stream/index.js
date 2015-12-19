@@ -1,7 +1,11 @@
 var Twit = require('twit');
 var mydb = require('./database');
+var met = require('./met_warnings');
 
-TweetPublisher = {mongoClient: mydb.mongoClient, statsPublisher: mydb.statsPublisher};
+TweetPublisher = {
+	mongoClient: mydb.mongoClient,
+	statsPublisher: mydb.statsPublisher,
+	metWarnings: met.metWarnings};
 
 // $ rhc env list -a socket
 

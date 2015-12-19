@@ -6,6 +6,7 @@ var request = require('request');
 var tweetPublisher = require('./twitter-stream');
 var mongoClient = tweetPublisher.mongoClient;
 var statsPublisher = tweetPublisher.statsPublisher;
+var metWarnings = tweetPublisher.metWarnings;
 
 
 var SampleApp = function() {
@@ -42,30 +43,6 @@ var SampleApp = function() {
             self.ipaddress = "127.0.0.1";
         };
     };
-
-
-    /**
-     *  Populate the cache.
-     */
-    /*
-    self.populateCache = function() {
-        if (typeof self.zcache === "undefined") {
-            self.zcache = { 'index.html': '' };
-        }
-
-        //  Local cache for static content.
-        self.zcache['index.html'] = fs.readFileSync('./index.html');
-        //self.zcache['socket.html'] = fs.readFileSync('./socket.html');
-
-    };
-    */
-
-    /**
-     *  Retrieve entry (content) from cache.
-     *  @param {string} key  Key identifying content to retrieve from cache.
-     */
-    // self.cache_get = function(key) { return self.zcache[key]; };
-
 
     /**
      *  terminator === the termination handler
@@ -136,6 +113,10 @@ var SampleApp = function() {
 
         self.routes['/stats/stop'] = function(req, res) {
             res.send( statsPublisher.stop() );
+        };
+
+        self.routes['/warnings/fetch'] = function(req, res) {
+            res.send( metWarnings.fetch() );
         };
 
 
