@@ -366,13 +366,9 @@ var geometry = new THREE.SphereGeometry( atmos_radius, 160, 120, phiStart, phiLe
     });
     websocket.on('volatile msg', function (data) {
       console.log(data);
-      if(data.tweet){
-        var d = new Date(Number(data.tweet.timestamp_ms));
-        $('#infomsg').html( d.toString() + " " + data.tweet.text);
-      }
       if(data.stats){
         var d = new Date();
-        $('#infomsg').html( d.toString() + " " + data.stats);
+        $('#infomsg').html( "stats: " + JSON.stringify(data.stats));
       }
     });
     render();

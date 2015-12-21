@@ -31,17 +31,11 @@ var SampleApp = function() {
         // My fix for OpenShift/local websocket port.
         // Requires that WEBSOCKET_PORT is set to 8000.
         //var appdns = process.env.OPENSHIFT_APP_DNS || "localhost";
-        var appdns = "wxglobe.elasticbeanstalk.com";
+        //var appdns = "wxglobe.elasticbeanstalk.com";
         //var ws_port    = process.env.WEBSOCKET_PORT || 8000;
-        var ws_port=80;
-        self.websocket = "http://" + appdns + ":" + ws_port + "/";
-
-        if (typeof self.ipaddress === "undefined") {
-            //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
-            //  allows us to run/test the app locally.
-            console.warn('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-            self.ipaddress = "127.0.0.1";
-        };
+        //var ws_port=80;
+        //self.websocket = "http://" + appdns + ":" + ws_port + "/";
+        self.websocket = process.env.WEBSOCKET || "http://localhost:8000/"
     };
 
     /**
@@ -174,7 +168,7 @@ var SampleApp = function() {
         self.server = require('http').Server(self.app);
         self.io = require('socket.io')(self.server);
         self.io.on('connection', function (socket) {
-          tweetPublisher.socket = socket;
+          tweetPublisher.setSocket( socket );
           socket.emit('news', { hello: 'world' });
           /*
           var tweets = setInterval(function () {

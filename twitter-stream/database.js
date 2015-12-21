@@ -55,16 +55,61 @@ mongoClient.insert = function(collection_name, item){
 mongoClient.collections = function(callback){
   if(mongoClient.db){
     mongoClient.db.collections(function(err, items) {
-      var collections = [];
+      var collections = {};
        items.forEach(function(i){
-         i.count(function(err,count){console.log(count)});
-         collections.push(i.s.name);
+         i.count(function(err,count){
+           collections[i.s.name] = count;
+           //console.log(i.s.name, count)
+         });
+         //collections.push(i.s.name);
        });
        callback(collections);
     });
   }else{
+    console.log("collections - no db");
     callback([]);
   }
 }
+
+var publishInterval, scanInterval;
+
+var stats = {};
+
+statsPublisher.start = function() {
+  var response = {};
+  if (scanInterval) {
+    clearInterval(scanInterval);
+  }
+
+  scanInterval = setInterval(function () {
+      mongoClient.collections( function(collections){
+        stats.collections = collections;
+        //collections.forEach(function(c){
+        //  stats.collections[c] = {};
+        //});
+      } );
+  }, 20000);  // every 20 seconds.
+
+
+
+
+  // Clear publish interval just be sure they don't stack up (probably not necessary)
+  if (publishInterval) {
+    clearInterval(publishInterval);
+  }
+  // Only publish every 100 millseconds so that the browser view is not overloaded
+  publishInterval = setInterval(function () {
+      publishStats();
+  }, 100);
+  response.message = "database stats publishing on.";
+  return response;
+}
+
+function publishStats () {
+	if(statsPublisher.socket){
+  	statsPublisher.socket.volatile.emit('volatile msg', {stats: stats});
+	}
+}
+
 
 module.exports = {mongoClient:mongoClient, statsPublisher:statsPublisher};

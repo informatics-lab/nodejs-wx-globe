@@ -41,11 +41,7 @@ TweetPublisher.start = function () {
 
 	// If the stream does not exist create it
 	if (!stream) {
-
-		// Connect to stream and filter by a geofence that is the size of the Earth
-		//stream = twitter.stream('statuses/filter', { locations: '-180,-90,180,90' });
 		stream = twitter.stream('statuses/filter', { follow: tv_weather });
-
 		stream.on('tweet', function (tweet) {
 			cachedTweet = tweet;
 			var d = new Date();
@@ -98,6 +94,11 @@ TweetPublisher.stop = function () {
 
 var lastPublishedTweetId;
 
+TweetPublisher.setSocket = function( socket ) {
+	TweetPublisher.socket = socket;
+	TweetPublisher.statsPublisher.socket = socket;
+}
+
 function publishTweet (tweet) {
 
 	if (tweet.id == lastPublishedTweetId) {
@@ -106,9 +107,6 @@ function publishTweet (tweet) {
 
 	lastPublishedTweetId = tweet.id;
 
-
-
-  //console.log(tweet.text);
 	if(TweetPublisher.socket){
   	TweetPublisher.socket.volatile.emit('volatile msg', {tweet: tweet});
 	}
