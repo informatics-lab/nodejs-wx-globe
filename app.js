@@ -86,9 +86,8 @@ var SampleApp = function() {
     self.createRoutes = function() {
         self.routes = { };
 
-        self.routes['/asciimo'] = function(req, res) {
-            var link = "http://i.imgur.com/kmbjB.png";
-            res.send("<html><body><img src='" + link + "'></body></html>");
+        self.routes['/env'] = function(req, res) {
+            res.send("<html><body>" + JSON.stringify(process.env) + "</body></html>");
         };
 
         self.routes['/stream/start'] = function(req, res) {
