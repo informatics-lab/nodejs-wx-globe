@@ -56,6 +56,9 @@ mongoClient.collections = function(callback){
   if(mongoClient.db){
     mongoClient.db.collections(function(err, items) {
       var collections = {};
+      if(err){
+        callback({});
+      }
        items.forEach(function(i){
          i.count(function(err,count){
            collections[i.s.name] = count;
@@ -67,7 +70,7 @@ mongoClient.collections = function(callback){
     });
   }else{
     console.log("collections - no db");
-    callback([]);
+    callback({});
   }
 }
 

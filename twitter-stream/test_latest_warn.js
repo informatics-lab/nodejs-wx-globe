@@ -10,7 +10,7 @@ function retrieve_latest(){
     var collection_name = d.toJSON().substr(0,7)+"_uk_warn";
     // Get the most recent N items.
     var N = 1;
-    var cursor = mydb.mongoClient.db.collection(collection_name).find().sort({$natural:1}).limit(N);
+    var cursor = mydb.mongoClient.db.collection(collection_name).find().sort({$natural:-1}).limit(N);
     var n = 0;
     cursor.each(function(err, doc) {
       if (doc != null) {

@@ -50,7 +50,7 @@ li {
 /* just some content with arbitrary styles for explanation purposes */
 .info {
     width: 80%;
-    height: 100px;
+    height: 50%;
     position: fixed;
     bottom: 0px;
     left: 10%;
@@ -365,10 +365,13 @@ var geometry = new THREE.SphereGeometry( atmos_radius, 160, 120, phiStart, phiLe
       websocket.emit('my other event', { my: 'data' });
     });
     websocket.on('volatile msg', function (data) {
-      console.log(data);
+      //console.log(data);
       if(data.stats){
-        var d = new Date();
-        $('#infomsg').html( "stats: " + JSON.stringify(data.stats));
+        var text = "";
+        for(col in data.stats.collections){
+          text += " " + col + ":" + data.stats.collections[col] + "<br>";
+        }
+        $('#infomsg').html( "stats: " + text);
       }
     });
     render();

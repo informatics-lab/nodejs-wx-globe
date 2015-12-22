@@ -68,7 +68,7 @@ TweetPublisher.start = function () {
 		if (cachedTweet) {
 			publishTweet(cachedTweet);
 		}
-	}, 100); // Adjust the interval to increase or decrease the rate at which Tweets sent to the clients
+	}, 1000); // Adjust the interval to increase or decrease the rate at which Tweets sent to the clients
 
 	return response;
 }
