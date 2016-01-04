@@ -4,6 +4,7 @@ var express = require('express');
 var fs      = require('fs');
 var request = require('request');
 var tweetPublisher = require('./twitter-stream');
+var gfsMenu = require('./forecast/gfs/menu');
 var mongoClient = tweetPublisher.mongoClient;
 var statsPublisher = tweetPublisher.statsPublisher;
 var metWarnings = tweetPublisher.metWarnings;
@@ -112,6 +113,11 @@ var SampleApp = function() {
             res.send( metWarnings.fetch() );
         };
 
+        self.routes['/forecast/gfs/menu'] = function(req, res) {
+            gfsMenu.fetch(req, function(data){
+              res.send(data);
+            } );
+        }
 
         self.routes['/websocket_init.js'] = function(req, res) {
           res.send('var websocket = io.connect("' + self.websocket + '");');
