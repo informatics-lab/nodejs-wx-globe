@@ -1,0 +1,159 @@
+<html>
+<head>
+<link href='http://fonts.googleapis.com/css?family=IM+Fell+English+SC|Atomic+Age|IM+Fell+English|Orbitron|Unna' rel='stylesheet' type='text/css'>
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/meny/1.4.0/meny.min.js"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/websocket_init.js"></script>
+
+<style>
+body {
+  margin: 0px;
+  background-color: #aaaaaa;
+  overflow: hidden;
+}
+
+#list {
+  font-family: 'Orbitron', sans-serif;
+  width: 90%;
+  height: 90%;
+  line-height: 2em;
+  border: 1px solid #ccc;
+  padding: 2%;
+  margin: 0;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+}
+
+li {
+  border-top: 1px solid #ccc;
+}
+
+/* just some content with arbitrary styles for explanation purposes */
+.info {
+    width: 80%;
+    height: 50%;
+    position: fixed;
+    bottom: 0px;
+    left: 10%;
+    padding: 10px;
+    background-color: rgba(120,120,120,0.5);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    border-radius: 5px;
+    z-index: 11; /* 1px higher than the overlay layer */
+}
+</style>
+<script>
+var wmsUrl;
+
+function load(ref){
+  console.log(wmsUrl, ref);
+}
+
+function buildMenu(){
+  var meny = Meny.create({
+    // The element that will be animated in from off screen
+    menuElement: document.querySelector( '.menu' ),
+
+    // The contents that gets pushed aside while Meny is active
+    contentsElement: document.querySelector( '.page' ),
+
+    // The alignment of the menu (top/right/bottom/left)
+    position: 'left',
+
+    // The height of the menu (when using top/bottom position)
+    height: '100%',
+
+    // The width of the menu (when using left/right position)
+    width: 400,
+
+    // The angle at which the contents will rotate to.
+    angle: 30,
+
+    // The mouse distance from menu position which can trigger menu to open.
+    threshold: 40,
+
+    // Width(in px) of the thin line you see on screen when menu is in closed position.
+    overlap: 6,
+
+    // The total time taken by menu animation.
+    transitionDuration: '0.5s',
+
+    // Transition style for menu animations
+    transitionEasing: 'ease',
+
+    // Gradient overlay for the contents
+    gradient: 'rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.65) 100%)',
+
+    // Use mouse movement to automatically open/close
+    mouse: true,
+
+    // Use touch swipe events to open/close
+    touch: true
+  });
+  meny.addEventListener( 'opened', function() {
+    //controls.enabled = false;
+  });
+  meny.addEventListener( 'closed', function() {
+    //controls.enabled = true;
+  });
+}
+</script>
+</head>
+<body>
+  <div class="menu">
+    <div>
+      <!-- Search <input type="text"> -->
+      <br>
+      <ul  id="list"></ul>
+    </div>
+  </div>
+  <div id="clue" style="position:absolute;visibility:hidden">
+    <h1>M</h1>
+    <h1>E</h1>
+    <h1>N</h1>
+    <h1>U</h1>
+  </div>
+  <div class="page">
+    <div class="info" id="infomsg">
+    </div>
+    <div id="webgl"></div>
+    <script>
+    buildMenu();
+    $('#infomsg').html("");
+    $.getJSON("menu_gfs.json", function(data){
+      wmsUrl = data["server"] + '?';
+      //delete wmsParams.styles;
+      //wmsParams.transparent = true;
+      data["layers"].forEach(function(el){
+        console.log("MENU", el);
+        $('#list').append('<li onclick="load(\'' + el[0] + '\')">' + el[1] + '</li>');
+      });
+    });
+    //websocket.on('news', function (data) {
+    //  console.log(data);
+    //  websocket.emit('my other event', { my: 'data' });
+    //});
+    websocket.on('volatile msg', function (data) {
+      //console.log(data);
+      if(data.stats){
+        var text = "";
+        for(col in data.stats.collections){
+          text += " " + col + ":" + data.stats.collections[col] + "<br>";
+        }
+        $('#infomsg').html( "stats: " + text);
+      }
+    });
+    </script>
+  </div>
+</body>
+</html>
