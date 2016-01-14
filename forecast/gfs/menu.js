@@ -47,48 +47,70 @@ function getPNG(layer, outname){
   );
 }
 
-function parseCapabilities(data, wmsUrl){
+function parseCapabilities(data, query){
+  var layer = query["layer"];
   var menu = [];
+  var selection = {};
   parser.parseString(data, function (err, result) {
-      //console.log(util.inspect(result, false, null));
-      //console.log(JSON.stringify(result, null, '\t'));
+      if(err){
+        console.log("menu.js", err);
+        return({});
+      }
+      var allcap;
       var allcap = result.WMS_Capabilities.Capability[0].Layer[0];
+      
       allcap.Layer.forEach(function(el){
         el.Layer.forEach(function(l){
           menu.push([l.Name[0],l.Title[0]]);
-          var layer = "temperature";
-          var re = new RegExp("^"+layer+"$","g");
-          //if (/^temperature$/g.test(l.Name)){
-          if(re.test(l.Name)){
-            //console.log(util.inspect(l.Dimension, false, null));
+          // This matches only exact strings, ignoring case.
+          // Change this to give substring match or similar,
+          // but this can result in multiple selections being
+          // returned.
+          var re = new RegExp("^"+layer+"$","gi");
+          if(re.test(l.Name[0])){
+            selection[l.Name[0]] = {}
             var dimensions = {}
             l.Dimension.forEach(function(d){
-              //console.log('D_', d['_']);
-              //console.log('name', d['$']['name']);
               dimensions[d['$']['name']] = d['_'].split(',');
-              //console.log('default', d['$']['default']);
+              dimensions[d['$']['name']].forEach(function(el,idx,arr){
+                // Remove any whitespace characters. This is probably
+                // the correct thing to do. If not try removing
+                // leading & trailing whitespace.
+                arr[idx] = el.replace(/\s/g,'');
+              });
             });
-            //console.log(dimensions);
+            selection[l.Name[0]].dimensions = dimensions;
+
             var styles = {}
-            l.Style.forEach(function(s){
-              styles[s['Name'][0]] = s['Title'][0];
-            });
-            //console.log(styles);
+            if(l.Style){
+              l.Style.forEach(function(s){
+                styles[s['Name'][0]] = s['Title'][0];
+              });
+              selection[l.Name[0]].styles = styles;
+            }
           }
 
         });
       });
   });
-  return ({server:wmsUrl,layers:menu})
+  result = {};
+  result.server = wmsUrl;
+  result.layers = menu;
+  result.selection = selection;
+  return (result)
 }
 
 // 'https://ogcie.iblsoft.com/ncep/gfs',
 var wmsUrl = 'https://wms-wetoffice.rhcloud.com/iblgfs';
 
+
 GfsMenu.fetch = function(req, callback){
+  console.log("FETCH MENU");
+  console.log(req.query);
+  wmsUrl = "http://" + req.route.params[0];
   getCapabilities(wmsUrl, function(body, wmsUrl){
-  menu = parseCapabilities(body, wmsUrl);
-  callback(menu);
+    menu = parseCapabilities(body, req.query);
+    callback(menu);
   });
 }
 

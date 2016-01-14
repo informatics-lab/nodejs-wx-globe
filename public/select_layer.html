@@ -1,13 +1,19 @@
 <html>
 <head>
-<link href='http://fonts.googleapis.com/css?family=IM+Fell+English+SC|Atomic+Age|IM+Fell+English|Orbitron|Unna' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=IM+Fell+English+SC|Atomic+Age|IM+Fell+English|Orbitron|Unna' rel='stylesheet' type='text/css'>
 
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
 
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/meny/1.4.0/meny.min.js"></script>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="/websocket_init.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/meny/1.4.0/meny.min.js"></script>
+
+  <!--
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/websocket_init.js"></script>
+-->
 
 <style>
 body {
@@ -39,24 +45,114 @@ li {
 
 /* just some content with arbitrary styles for explanation purposes */
 .info {
-    width: 80%;
-    height: 50%;
-    position: fixed;
-    bottom: 0px;
-    left: 10%;
-    padding: 10px;
-    background-color: rgba(120,120,120,0.5);
-    color: #fff;
-    font-family: 'Orbitron', sans-serif;
-    border-radius: 5px;
-    z-index: 11; /* 1px higher than the overlay layer */
+  width: 80%;
+  height: 80%;
+  position: fixed;
+  bottom: 10%;
+  left: 10%;
+  padding: 10px;
+  background-color: rgba(120,120,120,0.5);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  border-radius: 5px;
+  z-index: 11; /* 1px higher than the overlay layer */
 }
+
+.scrollable-menu {
+  height: auto;
+  max-height: 200px;
+  overflow-x: hidden;
+}
+
 </style>
 <script>
 var wmsUrl;
+var wmsMenu;
+var wmsParams = {
+  LAYERS: undefined,
+  VERSION:'1.3.0', SERVICE:'WMS', REQUEST:'GetMap',
+  //styles: 'rgb',
+  CRS: 'CRS:84',
+  BBOX: '-180,-90,180,90',
+  WIDTH: '2048',
+  HEIGHT: '1024',
+  FORMAT: 'image/png'
+};
+
 
 function load(ref){
   console.log(wmsUrl, ref);
+  $("#dims").text("Hello");
+  $.getJSON("/forecast/gfs/menu/" + wmsMenu, {layer: ref}, function(data){
+    wmsUrl = data["server"] + '?';
+    //delete wmsParams.styles;
+    wmsParams.transparent = true;
+    if(data.selection[ref]){
+      var dimName; // = Object.keys(data.selection[ref].dimensions)[0];
+      for(dimName in data.selection[ref].dimensions){
+        //$("#dims").append("<div class='dropdown'>
+        $("#dims").append("<div class='dropdown'><button class='btn btn-default dropdown-toggle' type='button'" +
+        "id='dropdown"+dimName+"' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>"
+        + dimName +
+        "<span class='caret'></span></button>" +
+        "<ul id='ul"+dimName+"' class='dropdown-menu scrollable-menu' aria-labelledby='dropdown"+dimName+"'></ul>" +
+        "<span>&nbsp;</span><span class='data-sel' data-dim='" + dimName + "' id='value_" + dimName +
+        "''></span></div>"
+      );
+      data.selection[ref].dimensions[dimName].forEach(function(el){
+        $("#ul"+dimName).append(
+          "<li><a href='#' data-dim='" + dimName + "' >" + el + "</a></li>"
+        );
+      });
+    }
+    if(data.selection[ref].styles){
+      var dimName = "STYLES";
+      $("#dims").append("<div class='dropdown'><button class='btn btn-default dropdown-toggle' type='button'" +
+      "id='dropdown"+dimName+"' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>"
+      + dimName +
+      "<span class='caret'></span></button>" +
+      "<ul id='ul"+dimName+"' class='dropdown-menu scrollable-menu' aria-labelledby='dropdown"+dimName+"'></ul>" +
+      "<span>&nbsp;</span><span class='data-sel' data-dim='" + dimName + "' id='value_" + dimName +
+      "''></span></div>");
+      for( styleName in data.selection[ref].styles){
+        $("#ul"+dimName).append(
+          "<li><a href='#' data-dim='" + dimName + "' >" + styleName + "</a></li>"
+        );
+      }
+    }
+    $("#dims").append("<button id='go' class='btn btn-default' type='button'>Go</button>");
+    $("#go").on("click", function(){
+      var p = $(".data-sel");
+      var params = wmsParams;
+      params["LAYERS"] = ref;
+      for(var i=0; i<p.length; i++){
+        // Don't use DIM_ prefix for elevation
+        var param_name = $(p[i]).attr('data-dim');
+        if(param_name == 'ELEVATION'){
+          ;
+        }else if(param_name == 'STYLES'){
+          ;
+        }else{
+          param_name = "DIM_" + param_name;
+        }
+        params[param_name] = $(p[i]).text();
+      }
+      console.log(params);
+      var wmsPng = wmsUrl + jQuery.param( params );
+      console.log(wmsPng);
+      $("#png").attr("src", wmsPng);
+    });
+    $(".dropdown").on("click.bs.dropdown", function(e){
+      var linkText = $(e.target).text(); // Get the link text
+      var dim = $(e.target).attr('data-dim');
+      if( linkText && dim){
+        console.log(dim, linkText);
+        $('#value_' + dim).text(linkText);
+      }
+    });
+    //$('#infomsg').html(JSON.stringify(data.selection[ref].dimensions));
+  }
+});
 }
 
 function buildMenu(){
@@ -125,13 +221,16 @@ function buildMenu(){
   </div>
   <div class="page">
     <div class="info" id="infomsg">
+      <div id="dims"></div>
+      <img style="width:400px" id="png"></img>
     </div>
     <div id="webgl"></div>
     <script>
     buildMenu();
-    $('#infomsg').html("");
+    //$('#infomsg').html("");
     $.getJSON("menu_gfs.json", function(data){
       wmsUrl = data["server"] + '?';
+      wmsMenu = data["menu"];
       //delete wmsParams.styles;
       //wmsParams.transparent = true;
       data["layers"].forEach(function(el){
@@ -139,20 +238,7 @@ function buildMenu(){
         $('#list').append('<li onclick="load(\'' + el[0] + '\')">' + el[1] + '</li>');
       });
     });
-    //websocket.on('news', function (data) {
-    //  console.log(data);
-    //  websocket.emit('my other event', { my: 'data' });
-    //});
-    websocket.on('volatile msg', function (data) {
-      //console.log(data);
-      if(data.stats){
-        var text = "";
-        for(col in data.stats.collections){
-          text += " " + col + ":" + data.stats.collections[col] + "<br>";
-        }
-        $('#infomsg').html( "stats: " + text);
-      }
-    });
+
     </script>
   </div>
 </body>

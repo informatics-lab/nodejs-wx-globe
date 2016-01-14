@@ -113,7 +113,7 @@ var SampleApp = function() {
             res.send( metWarnings.fetch() );
         };
 
-        self.routes['/forecast/gfs/menu'] = function(req, res) {
+        self.routes['/forecast/gfs/menu/*'] = function(req, res) {
             gfsMenu.fetch(req, function(data){
               res.send(data);
             } );

@@ -1,5 +1,6 @@
 {
 	"server": "https://wms-wetoffice.rhcloud.com/iblgfs",
+	"menu": "wms-wetoffice.rhcloud.com/iblgfs",
 	"layers": [
 		[
 			"temperature",
