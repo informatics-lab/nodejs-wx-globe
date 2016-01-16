@@ -1,0 +1,471 @@
+<html>
+<head>
+
+<link href='http://fonts.googleapis.com/css?family=IM+Fell+English+SC|Atomic+Age|IM+Fell+English|Orbitron|Unna' rel='stylesheet' type='text/css'>
+
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/meny/1.4.0/meny.min.js"></script>
+
+<script type="text/javascript" src="http://threejs.org/build/three.min.js"></script>
+<script type="text/javascript" src="http://threejs.org/examples/js/controls/TrackballControls.js"></script>
+
+<script src="MapMarker.js"></script>
+
+<!--
+<script src="/socket.io/socket.io.js"></script>
+<script src="/websocket_init.js"></script>
+-->
+
+<style>
+body {
+  margin: 0px;
+  background-color: #aaaaaa;
+  overflow: hidden;
+}
+
+#list {
+  font-family: 'Orbitron', sans-serif;
+  width: 90%;
+  height: 90%;
+  line-height: 2em;
+  border: 1px solid #ccc;
+  padding: 2%;
+  margin: 0;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+}
+
+li {
+  border-top: 1px solid #ccc;
+}
+
+/* just some content with arbitrary styles for explanation purposes */
+.info {
+  width: 80%;
+  height: 10%;
+  position: fixed;
+  bottom: 10%;
+  left: 10%;
+  padding: 10px;
+  background-color: rgba(120,120,120,0.5);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  border-radius: 5px;
+  z-index: 11; /* 1px higher than the overlay layer */
+}
+
+
+.scrollable-menu {
+  height: auto;
+  max-height: 200px;
+  overflow-x: hidden;
+}
+
+</style>
+
+<script>
+var scene = new THREE.Scene();
+var width  = window.innerWidth,
+height = window.innerHeight;
+var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 0);
+camera.position.y = 0;
+camera.position.z = 500;
+var controls = new THREE.TrackballControls(camera);
+var spheres = new THREE.Object3D();
+var labels;
+scene.add( spheres );
+var globe_vid = {};
+
+var ambientLight = new THREE.AmbientLight( 0x333366 );
+scene.add( ambientLight );
+
+var pointLight = new THREE.PointLight( 0xffff55, 1, 0 );
+pointLight.position.set( 0, 0, 2348100 );
+scene.add( pointLight );
+
+var sunGeometry = new THREE.SphereGeometry( 10000 );
+var sunMaterial = new THREE.MeshBasicMaterial( {color: 0xffff55} );
+var sun = new THREE.Mesh( sunGeometry, sunMaterial );
+sun.position.set( 0, 0, 2348100 );
+scene.add( sun );
+
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(width, height);
+
+function render() {
+  controls.update();
+  requestAnimationFrame(render);
+  renderer.render(scene, camera);
+}
+
+var landTxtrParams = {
+  request:'getmap',
+  service:'wms',
+  //BBOX:'-10.12,48.77,2.43,59.29',
+  BBOX:'-180,-90,180,90',
+  srs:'EPSG:4326',
+  format:'image/jpeg',
+  layers:'gebco_latest',
+  width:2048,
+  height:1024,
+  version:'1.1.1'
+};
+
+var landTxtrUrl = 'http://www.gebco.net/' +
+'data_and_products/gebco_web_services/web_map_service/mapserv?';
+
+var basicMaterial;
+
+var earth_radius = 98;
+var atmos_radius = 100;
+
+var latNorth = 90.0;
+var latSouth = -90.0;
+var lonEast = 180.0;
+var lonWest = -180.0;
+
+var thetaStart = (Math.PI/180.0) * (90.0 - latNorth);
+var thetaEnd = (Math.PI/180.0) * (90.0 - latSouth);
+var thetaLength = thetaEnd - thetaStart;
+var phiStart = (Math.PI/180.0) * (180.0 - lonEast);
+var phiEnd = (Math.PI/180.0) * (180.0 - lonWest);
+var phiLength = phiEnd - phiStart;
+
+var geometry = new THREE.SphereGeometry( atmos_radius, 160, 120, phiStart, phiLength,
+  thetaStart, thetaLength );
+
+  var surface_geometry = new THREE.SphereGeometry( earth_radius, 160, 120, phiStart, phiLength, thetaStart, thetaLength );
+
+
+  function loadWmsImage( url, params, cb, opts ){
+    var tmpImage = new Image();
+    var wmsPng = url + jQuery.param( params );
+    console.log("loading url", url);
+    console.log("loading params", params);
+    tmpImage.onload = function(){
+      var canv = document.createElement('canvas');
+      var ctx = canv.getContext('2d');
+      canv.width = this.width;
+      canv.height = this.height;
+      ctx.drawImage(this, 0, 0);
+      cb(canv.toDataURL(), opts);
+    }
+    tmpImage.crossOrigin = 'anonymous';
+    tmpImage.src =  wmsPng;
+  }
+
+  function loadImage( url, cb, opts ){
+    var tmpImage = new Image();
+    tmpImage.onload = function(){
+      var canv = document.createElement('canvas');
+      var ctx = canv.getContext('2d');
+      canv.width = this.width;
+      canv.height = this.height;
+      ctx.drawImage(this, 0, 0);
+      cb(canv.toDataURL(), opts);
+    }
+    tmpImage.crossOrigin = 'anonymous';
+    tmpImage.src =  url;
+  }
+
+  function wmsLoader(img, opts){
+    var loader = new THREE.TextureLoader();
+    loader.crossOrigin = 'anonymous';
+    loader.load(img,
+      // Function when resource is loaded
+      function ( texture ) {
+        // do something with the texture
+        var basicMaterial = new THREE.MeshPhongMaterial( {
+          overdraw: 1.0,
+          opacity: opts.opacity,
+          transparent: true,
+          map: texture
+        } );
+        opts.sphere = new THREE.Mesh(	opts.geometry, basicMaterial );
+        spheres.add( opts.sphere );
+        //sphere = opts.sphere;
+      },
+      // Function called when download progresses
+      function ( xhr ) {
+        console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+      },
+      // Function called when download errors
+      function ( xhr ) {
+        console.log( 'An error happened' );
+      }
+    );
+  }
+
+  function loadVideo( url, cb ){
+    var video_canv = document.createElement('canvas');
+    var video = document.createElement( 'video' );
+    video.loop = true;
+    video.id = 'video';
+    video.src = url;
+    video.crossOrigin = "Anonymous";
+    video.autoplay = true;
+    video.load(); // must call after setting/changing source
+    video.playbackRate = 0.5;
+    video.addEventListener("loadedmetadata", function () {
+      cb( video )
+    })
+    video.addEventListener('loadeddata', function() {
+      video.play()
+    })
+
+  }
+
+  var wmsUrl = 'http://wms-wetoffice.rhcloud.com/neo?';
+  var wmsMenu;
+
+  var wmsParams = {
+    version:'1.3.0', service:'WMS', request:'GetMap',
+    styles: 'rgb',
+    crs: 'CRS:84',
+    bbox: '-180,-90,180,90',
+    width: '2048',
+    height: '1024',
+    format: 'image/png'
+  };
+  // layers: 'BlueMarbleNG-TB',
+
+  var sphere;
+
+  //loadWmsImage( wmsUrl, wmsParams, wmsLoader, {sphere:sphere, opacity:1.0, geometry:surface_geometry});
+  loadImage( "/bluemarble.png", wmsLoader, {sphere:sphere, opacity:1.0, geometry:surface_geometry});
+
+
+  function loadLocationMarkers(){
+    $.getJSON("tv_weather.json", function(data){
+      labels = [];
+      data.forEach(function(el){
+        if(el.location){
+          labels.push({text:el.screen_name,longitude:el.location[0],latitude:el.location[1]});
+        }
+      });
+      labels.forEach(function(l){
+        TextSprite( l.text, LLtoXYZ(earth_radius,l), function(spr){l.marker=spr;spheres.add(spr);});
+      });
+    });
+  }
+
+  function buildMenu(){
+    var meny = Meny.create({
+      // The element that will be animated in from off screen
+      menuElement: document.querySelector( '.menu' ),
+
+      // The contents that gets pushed aside while Meny is active
+      contentsElement: document.querySelector( '.page' ),
+
+      // The alignment of the menu (top/right/bottom/left)
+      position: 'left',
+
+      // The height of the menu (when using top/bottom position)
+      height: '100%',
+
+      // The width of the menu (when using left/right position)
+      width: 400,
+
+      // The angle at which the contents will rotate to.
+      angle: 30,
+
+      // The mouse distance from menu position which can trigger menu to open.
+      threshold: 40,
+
+      // Width(in px) of the thin line you see on screen when menu is in closed position.
+      overlap: 6,
+
+      // The total time taken by menu animation.
+      transitionDuration: '0.5s',
+
+      // Transition style for menu animations
+      transitionEasing: 'ease',
+
+      // Gradient overlay for the contents
+      gradient: 'rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.65) 100%)',
+
+      // Use mouse movement to automatically open/close
+      mouse: true,
+
+      // Use touch swipe events to open/close
+      touch: true
+    });
+    meny.addEventListener( 'opened', function() {
+      controls.enabled = false;
+    });
+    meny.addEventListener( 'closed', function() {
+      controls.enabled = true;
+    });
+  }
+
+  var outer_sphere;
+
+  function load_orig( name ){
+    console.log("loading", name);
+    console.log("from", wmsUrl);
+    //spheres.remove(outer_sphere);
+    wmsParams.layers = name;
+    loadWmsImage( wmsUrl, wmsParams, wmsLoader, {sphere: outer_sphere, geometry: geometry});
+  }
+
+  function load(ref){
+    console.log(wmsUrl, ref);
+    $("#dims").text(ref);
+    $("#infomsg").css({height:"80%"});
+    $.getJSON("/forecast/gfs/menu/" + wmsMenu, {layer: ref}, function(data){
+      console.log("DATA", data);
+      wmsUrl = data["server"] + '?';
+      //delete wmsParams.styles;
+      wmsParams.transparent = true;
+      if(data.selection[ref]){
+        var dimName; // = Object.keys(data.selection[ref].dimensions)[0];
+        for(dimName in data.selection[ref].dimensions){
+          //$("#dims").append("<div class='dropdown'>
+          $("#dims").append("<div class='dropdown'><button class='btn btn-default dropdown-toggle' type='button'" +
+          "id='dropdown"+dimName+"' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>"
+          + dimName +
+          "<span class='caret'></span></button>" +
+          "<ul id='ul"+dimName+"' class='dropdown-menu scrollable-menu' aria-labelledby='dropdown"+dimName+"'></ul>" +
+          "<span>&nbsp;</span><span class='data-sel' data-dim='" + dimName + "' id='value_" + dimName +
+          "''></span></div>"
+        );
+        data.selection[ref].dimensions[dimName].forEach(function(el){
+          $("#ul"+dimName).append(
+            "<li><a href='#' data-dim='" + dimName + "' >" + el + "</a></li>"
+          );
+        });
+      }
+      if(data.selection[ref].styles){
+        var dimName = "STYLES";
+        $("#dims").append("<div class='dropdown'><button class='btn btn-default dropdown-toggle' type='button'" +
+        "id='dropdown"+dimName+"' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>"
+        + dimName +
+        "<span class='caret'></span></button>" +
+        "<ul id='ul"+dimName+"' class='dropdown-menu scrollable-menu' aria-labelledby='dropdown"+dimName+"'></ul>" +
+        "<span>&nbsp;</span><span class='data-sel' data-dim='" + dimName + "' id='value_" + dimName +
+        "''></span></div>");
+        for( styleName in data.selection[ref].styles){
+          $("#ul"+dimName).append(
+            "<li><a href='#' data-dim='" + dimName + "' >" + styleName + "</a></li>"
+          );
+        }
+      }
+      $("#dims").append("<button id='go' class='btn btn-default' type='button'>Go</button>");
+      $("#go").on("click", function(){
+        var p = $(".data-sel");
+        var params = wmsParams;
+        params["LAYERS"] = ref;
+        for(var i=0; i<p.length; i++){
+          // Don't use DIM_ prefix for elevation
+          var param_name = $(p[i]).attr('data-dim');
+          if(param_name == 'ELEVATION'){
+            ;
+          }else if(param_name == 'STYLES'){
+            ;
+          }else{
+            param_name = "DIM_" + param_name;
+          }
+          params[param_name] = $(p[i]).text();
+        }
+        var wmsPng = wmsUrl + jQuery.param( params );
+        //$("#png").attr("src", wmsPng);
+        loadWmsImage( wmsUrl, params, wmsLoader, {sphere: outer_sphere, opacity:0.3, geometry: geometry});
+        $("#dims").text(ref);
+        $("#infomsg").css({height:"10%"});
+      });
+      $(".dropdown").on("click.bs.dropdown", function(e){
+        var linkText = $(e.target).text(); // Get the link text
+        var dim = $(e.target).attr('data-dim');
+        if( linkText && dim){
+          console.log(dim, linkText);
+          $('#value_' + dim).text(linkText);
+        }
+      });
+      //$('#infomsg').html(JSON.stringify(data.selection[ref].dimensions));
+    }
+  });
+  }
+
+  function load_sequence()
+  {
+    //var times = "PT0S,PT3H,PT6H,PT9H,PT12H,PT15H,PT18H,PT21H,PT24H,PT27H,PT30H,PT33H,PT36H".split(",");
+    var times = "PT0S,PT3H,PT6H,PT9H,PT12H".split(",");
+    var params = {
+      DIM_FORECAST: "",
+      DIM_RUN: "",
+      ELEVATION: "250hPa",
+      LAYERS: "wind-streamlines",
+      STYLES: "white-alert-streams",
+      bbox: "-180,-90,180,90",
+      crs: "CRS:84",
+      format: "image/png",
+      height: "1024",
+      request: "GetMap",
+      service: "WMS",
+      transparent: true,
+      version: "1.3.0",
+      width: "2048"
+    };
+    console.log("loading", times);
+  }
+
+  spheres.rotation.y -= Math.PI/2;
+
+  controls.addEventListener( 'change', function(){
+    $('#clue').css('visibility','visible');
+    setTimeout(function(){$('#clue').css('visibility','hidden');}, 2000);
+  });
+
+  </script>
+</head>
+<body>
+  <div class="menu">
+    <div>
+      <!-- Search <input type="text"> -->
+      <br>
+      <ul  id="list"></ul>
+    </div>
+  </div>
+  <div id="clue" style="position:absolute;visibility:hidden">
+    <h1>M</h1>
+    <h1>E</h1>
+    <h1>N</h1>
+    <h1>U</h1>
+  </div>
+  <div class="page">
+    <div class="info" id="infomsg">
+      <div id="dims"></div>
+      <img style="width:400px" id="png"></img>
+    </div>
+    <div id="webgl"></div>
+    <script>
+    buildMenu();
+    $.getJSON("menu_glofas.json", function(data){
+      wmsUrl = data["server"] + '?';
+      wmsMenu = data["menu"];
+      delete wmsParams.styles;
+      wmsParams.transparent = true;
+
+      data["layers"].forEach(function(el){
+        console.log("MENU", el);
+        $('#list').append('<li onclick="load(\'' + el[0] + '\')">' + el[1] + '</li>');
+      });
+
+      load_sequence();
+    });
+    document.getElementById('webgl').appendChild(renderer.domElement);
+    render();
+    </script>
+  </div>
+</body>
+</html>
