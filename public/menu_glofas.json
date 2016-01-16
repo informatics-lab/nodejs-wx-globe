@@ -1,0 +1,68 @@
+{
+	"server_": "http://ies-ows.jrc.ec.europa.eu/glofas-ows-prod/",
+	"menu_" : "ies-ows.jrc.ec.europa.eu/glofas-ows-prod/",
+	"server": "http://wms-wetoffice.rhcloud.com/glofas",
+	"menu": "wms-wetoffice.rhcloud.com/glofas",
+	"layers": [
+		[
+			"EfasMask",
+			"EFAS protection"
+		],
+		[
+			"date",
+			"Forecast date"
+		],
+		[
+			"FloodHazard100y",
+			"Flood hazard 100 year"
+		],
+		[
+			"MajorRiverBasins",
+			"Major river basins"
+		],
+		[
+			"GlofasLakesReservoirs",
+			"GloFAS lakes and reservoirs"
+		],
+		[
+			"RPG_U",
+			"Reporting Points"
+		],
+		[
+			"RPGM",
+			"Medium alert - T GT 2 years"
+		],
+		[
+			"RPGH",
+			"High alert - T GT 5 years"
+		],
+		[
+			"RPGS",
+			"Severe alert - T GT 20 years"
+		],
+		[
+			"sumALHEGE",
+			"5 Year Return Period Exceedance"
+		],
+		[
+			"sumALEEGE",
+			"20 Year Return Period Exceedance"
+		],
+		[
+			"EGE_probRgt300",
+			"Precipitation Prob. GT 300mm"
+		],
+		[
+			"EGE_probRgt150",
+			"Precipitation Prob. GT 150mm"
+		],
+		[
+			"EGE_probRgt50",
+			"Precipitation Prob. GT 50mm"
+		],
+		[
+			"AccRainEGE",
+			"Accumulated Precipitation"
+		]
+	]
+}

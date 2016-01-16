@@ -58,7 +58,7 @@ function parseCapabilities(data, query){
       }
       var allcap;
       var allcap = result.WMS_Capabilities.Capability[0].Layer[0];
-      
+      console.log("allcap", allcap);
       allcap.Layer.forEach(function(el){
         el.Layer.forEach(function(l){
           menu.push([l.Name[0],l.Title[0]]);
@@ -70,17 +70,19 @@ function parseCapabilities(data, query){
           if(re.test(l.Name[0])){
             selection[l.Name[0]] = {}
             var dimensions = {}
-            l.Dimension.forEach(function(d){
-              dimensions[d['$']['name']] = d['_'].split(',');
-              dimensions[d['$']['name']].forEach(function(el,idx,arr){
-                // Remove any whitespace characters. This is probably
-                // the correct thing to do. If not try removing
-                // leading & trailing whitespace.
-                arr[idx] = el.replace(/\s/g,'');
-              });
-            });
-            selection[l.Name[0]].dimensions = dimensions;
 
+            if(l.Dimension){
+              l.Dimension.forEach(function(d){
+                dimensions[d['$']['name']] = d['_'].split(',');
+                dimensions[d['$']['name']].forEach(function(el,idx,arr){
+                  // Remove any whitespace characters. This is probably
+                  // the correct thing to do. If not try removing
+                  // leading & trailing whitespace.
+                  arr[idx] = el.replace(/\s/g,'');
+                });
+              });
+              selection[l.Name[0]].dimensions = dimensions;
+            }
             var styles = {}
             if(l.Style){
               l.Style.forEach(function(s){
